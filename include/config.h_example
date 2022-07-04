@@ -1,0 +1,51 @@
+#ifndef _EFA_CONFIG_H_
+#define _EFA_CONFIG_H_
+
+// PIN where the voltage diviter of the phone line is connected to the ADC, 0-1V range
+#define EFA_LINE_RECEIVE_PIN        36
+
+// PIN where the DAC and modulating transistor is connected
+//#define EFA_LINE_TRANSMIT_CHANNEL   DAC_CHANNEL_1 // GPIO pin 25
+#define EFA_LINE_TRANSMIT_CHANNEL   DAC_CHANNEL_2 // GPIO pin 26
+
+// Status LED pins
+#define EFA_ERROR_LED_PIN           25
+#define EFA_WARN_LED_PIN            33
+#define EFA_OK_LED_PIN              32
+
+// Alert if the line voltage goes over this
+#define EFA_ALARM_VOLTAGE           0.4
+
+// Number of milliseconds to be continuously within alarm range before sending dialtone
+#define EFA_DIALTONE_DELAY          500
+
+// Dialtone frequency in hertz
+#define EFA_DIALTONE_FREQUENCY      380
+
+// Number of milliseconds to be continuously within alarm range before notifying
+#define EFA_ALERT_DURATION          1000
+
+// Number of milliseconds to be continuously outside alarm range before resetting the alarm
+#define EFA_RESET_DURATION          10000
+
+// Telegram bot token
+#define EFA_TELEGRAM_TOKEN          "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+// Mean time between scanning for new Telegram messages
+#define EFA_TELEGRAM_SCAN_INTERVAL   1000
+
+typedef struct _WifiNetwork {
+    const char *ssid;
+    const char *password;
+} WifiNetwork;
+
+// WiFi SSID and passwords
+static WifiNetwork wifiNetworks[] = {
+    {"myssid", "password"},
+    {"someotherssid", "password2"},
+};
+
+// Hostname for this device on the WiFi network
+#define EFA_HOSTNAME    "esp32-fxs-adapter"
+
+#endif
