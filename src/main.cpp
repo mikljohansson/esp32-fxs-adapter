@@ -23,6 +23,9 @@ static UniversalTelegramBot bot(EFA_TELEGRAM_TOKEN, botWifiClient);
 // Timestamp when last messages scan was done
 static unsigned long lastMessageScan = 0;
 
+// Number of milliseconds between scanning for new Telegram messages
+static double scanInterval = EFA_MIN_TELEGRAM_SCAN_INTERVAL;
+
 // Timestamp when current alarm was triggered, 0 if no alarm triggered
 static unsigned long lastAlarmTriggered = 0;
 
@@ -35,6 +38,7 @@ static boolean alarmHandled = false;
 // Persistent eeprom storage
 Preferences preferences;
 PreferenceSet chatIds(preferences, "cids");
+PreferenceSet authIds(preferences, "aids");
 
 // Current line voltage
 static float lineVoltage = 0.0;
@@ -139,8 +143,13 @@ void setup() {
 }
 
 void loop() {
-    if (millis() - lastMessageScan > EFA_TELEGRAM_SCAN_INTERVAL) {
+    if (millis() - lastMessageScan > scanInterval) {
         int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+        
+        // Apply exponential backoff when no messages were found
+        scanInterval = numNewMessages 
+            ? EFA_MIN_TELEGRAM_SCAN_INTERVAL
+            : std::min(scanInterval * 1.001, (double)EFA_MAX_TELEGRAM_SCAN_INTERVAL);
 
         while (numNewMessages) {
             handleNewMessages(numNewMessages);
@@ -208,6 +217,7 @@ void handleNewMessages(int numNewMessages) {
 
         if (text == "/start") {
             String message = "Welcome to Bihusets larm " + senderName + ".\n\n";
+            message += "/login <password> : authenticate before sending commands\n";
             message += "/subscribe : to notify me if the alarm triggers\n";
             message += "/unsubscribe : to stop receiving alarms\n";
             message += "/list : to list subscribed users\n\n";
@@ -216,40 +226,56 @@ void handleNewMessages(int numNewMessages) {
             bot.sendMessage(chatId, message, "Markdown");
         }
 
-        if (text == "/subscribe") {
-            chatIds.add(chatId.c_str());
-            bot.sendMessage(chatId, "Ok, I'll notify you if the alarm trips", "Markdown");
+        if (text.startsWith("/login") && text.length() > 7) {
+            if (text.substring(7) == EFA_BOT_PASSWORD) {
+                authIds.add(chatId.c_str());
+                bot.sendMessage(chatId, "Successfully authenticated", "Markdown");
+            }
+            else {
+                bot.sendMessage(chatId, "Incorrect password", "Markdown");
+            }
         }
 
-        if (text == "/unsubscribe") {
-            chatIds.remove(chatId.c_str());
-            bot.sendMessage(chatId, "I've unsubscribed you from alarms", "Markdown");
-        }
-
-        if (text == "/list") {
-            String message = "I'm alerting these users in case of an alarm: ";
-            for (int i = 0, sz = chatIds.size(); i < sz; i++) {
-                if (i > 0) {
-                    message += ", ";
-                }
-
-                message += chatIds.get(i);
+        if (authIds.exists(chatId.c_str())) {
+            if (text == "/subscribe") {
+                chatIds.add(chatId.c_str());
+                bot.sendMessage(chatId, "Ok, I'll notify you if the alarm trips", "Markdown");
             }
 
-            bot.sendMessage(chatId, message, "Markdown");
-        }
+            if (text == "/unsubscribe") {
+                chatIds.remove(chatId.c_str());
+                bot.sendMessage(chatId, "I've unsubscribed you from alarms", "Markdown");
+            }
 
-        if (text == "/clear") {
-            chatIds.clear();
-            bot.sendMessage(chatId, "I've removed all subscribed users", "Markdown");
-        }
+            if (text == "/list") {
+                String message = "I'm alerting these users in case of an alarm: ";
+                for (int i = 0, sz = chatIds.size(); i < sz; i++) {
+                    if (i > 0) {
+                        message += ", ";
+                    }
 
-        if (text == "/debug") {
-            String message = "";
-            message += "Line voltage: ";
-            message += lineVoltage;
-            message += "\n";
-            bot.sendMessage(chatId, message, "Markdown");
+                    message += chatIds.get(i);
+                }
+
+                bot.sendMessage(chatId, message, "Markdown");
+            }
+
+            if (text == "/clear") {
+                chatIds.clear();
+                authIds.clear();
+                bot.sendMessage(chatId, "I've removed all authanticated or subscribed users", "Markdown");
+            }
+
+            if (text == "/debug") {
+                String message = "";
+                message += "Line voltage: ";
+                message += lineVoltage;
+                message += "\n";
+                bot.sendMessage(chatId, message, "Markdown");
+            }
+        }
+        else {
+            bot.sendMessage(chatId, "Please `/login <password>` before sending commands", "Markdown");
         }
     }
 }

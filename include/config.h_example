@@ -2,7 +2,7 @@
 #define _EFA_CONFIG_H_
 
 // PIN where the voltage diviter of the phone line is connected to the ADC, 0-1V range
-#define EFA_LINE_RECEIVE_PIN        36
+#define EFA_LINE_RECEIVE_PIN        35
 
 // PIN where the DAC and modulating transistor is connected
 //#define EFA_LINE_TRANSMIT_CHANNEL   DAC_CHANNEL_1 // GPIO pin 25
@@ -31,8 +31,14 @@
 // Telegram bot token
 #define EFA_TELEGRAM_TOKEN          "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-// Mean time between scanning for new Telegram messages
-#define EFA_TELEGRAM_SCAN_INTERVAL   1000
+// Max milliseconds between scanning for new Telegram messages
+#define EFA_MIN_TELEGRAM_SCAN_INTERVAL   1000
+
+// Max milliseconds between scanning for new Telegram messages
+#define EFA_MAX_TELEGRAM_SCAN_INTERVAL   60000
+
+// Password which needs to be given to interact with the bot
+#define EFA_BOT_PASSWORD            "secretpassword"
 
 typedef struct _WifiNetwork {
     const char *ssid;
